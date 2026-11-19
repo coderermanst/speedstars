@@ -1,0 +1,219 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>SUPER SPEED STARS</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:ital,wght@1,800&family=Barlow+Condensed:wght@500;700&display=swap">
+<style>
+:root{color-scheme:dark;--ink:#10142b;--pan:rgba(16,20,43,.88);--ac:#ffd400;--hot:#ff3d5a;--cy:#4de1ff;--fg:#fff}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;background:#10142b;color:var(--fg);font:600 16px 'Barlow Condensed',system-ui,sans-serif;touch-action:none;user-select:none}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#ui,#hud{position:fixed;inset:0;pointer-events:none;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+#ui>*,#hud>*{pointer-events:auto}
+h1,h2{font-family:Rubik,sans-serif;font-style:italic;font-weight:800;margin:.2em 0;letter-spacing:.5px}
+h1{font-size:clamp(28px,5vw,46px);line-height:.95;color:var(--ac);text-shadow:3px 3px 0 var(--hot)}
+h3{margin:.8em 0 .2em;color:var(--cy);font-size:15px}
+.side,.panel{position:fixed;left:0;top:0;bottom:0;width:min(380px,100vw);max-height:100dvh;background:var(--pan);padding:14px 14px calc(22px + env(safe-area-inset-bottom,0));overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;transform:none;margin:0}
+.side>*,.panel>*{transform:none}.panel .row{min-width:0;flex-wrap:wrap}.panel .row span{flex:0 0 72px}.panel input[type=range]{min-width:90px;flex:1}
+.wide{width:min(760px,100vw)}@media(max-width:520px){.side,.panel{width:100vw;padding-left:12px;padding-right:12px}.panel .row span{flex-basis:66px}.panel button{padding:8px 10px}}
+button,select,input{font:inherit;color:var(--fg)}
+button{background:#fff;color:var(--ink);border:0;padding:9px 14px;margin:3px 2px;cursor:pointer;font-weight:700;font-size:17px;transform:skewX(-8deg)}
+button:hover{background:var(--ac)}button:disabled{opacity:.35;cursor:not-allowed}
+.big{display:block;width:100%;text-align:left}.go{background:var(--cy)}
+input,select{background:#1b2150;border:1px solid #56609c;padding:7px;width:100%}input[type=range]{padding:0}
+.card{background:#1b2150;padding:10px;margin:8px 0;line-height:1.35}
+.row{display:flex;align-items:center;gap:6px;margin:4px 0}.row span{width:72px;opacity:.8}.row b{flex:1;text-align:center}
+.sw{display:inline-block;width:24px;height:24px;margin:2px;border:2px solid transparent;cursor:pointer}.sw.on{border-color:#fff;outline:2px solid var(--hot)}
+.bar{height:10px;background:#0006;margin:3px 0}.bar i{display:block;height:100%;background:var(--ac)}
+table{width:100%;border-collapse:collapse}td,th{padding:4px 6px;text-align:left;border-bottom:1px solid #fff2}
+.tabs button{padding:5px 10px;font-size:15px}.tabs .on{background:var(--ac)}
+#top{position:absolute;top:8px;left:8px;right:8px;display:flex;gap:6px;align-items:flex-start}
+#clock{margin-left:auto;background:var(--pan);padding:6px 16px;border-radius:30px;font:800 24px Rubik;font-style:italic;text-align:center;min-width:170px}
+#clock small{display:block;font:700 18px 'Barlow Condensed';color:var(--cy)}
+#msg{position:absolute;top:30%;width:100%;text-align:center;font:800 clamp(40px,10vw,100px) Rubik;font-style:italic;color:var(--ac);text-shadow:4px 4px 0 var(--hot);pointer-events:none}
+#fb{position:absolute;top:calc(30% + 90px);width:100%;text-align:center;font-size:28px;pointer-events:none;text-shadow:2px 2px 0 #000}
+#sta{position:absolute;left:10px;bottom:14px;width:min(300px,38vw)}
+.pad{position:absolute;bottom:14px;width:34vw;height:34vh;max-height:200px;background:#ffffff40;border:3px solid #fff;border-radius:20px;font:800 40px Rubik;display:flex;align-items:center;justify-content:center}
+.modal{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000a}
+.modal>div{background:var(--pan);padding:18px 24px;max-width:min(520px,96vw);max-height:96vh;overflow:auto;border-top:5px solid var(--ac)}
+.rs{font:800 44px Rubik;font-style:italic;color:var(--ac)}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style></head><body>
+<canvas id="c"></canvas><div id="ui"></div><div id="hud" hidden></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const T=THREE,$=s=>document.querySelector(s);
+/* ---------- SAVE ---------- */
+const SK=['#f6d3b3','#e4aa7c','#c68642','#8d5524','#5a3a1c','#2f1d10'],CO=['#e62b2b','#ffd400','#1fa84a','#1e63e6','#f4f4f4','#151515','#ff4fb0','#ff8a00','#7b3fe4','#00c8c8'];
+const DEF=()=>({id:'G'+Math.random().toString(36).slice(2,8).toUpperCase(),name:'Guest',xp:0,pts:3,th:0,
+ st:{power:10,stamina:10,accel:10,top:10,agility:10,endurance:10},
+ ch:{skin:2,build:1,h:1.82,hair:1,hc:5,head:0,hdc:0,top:0,tc:0,tp:0,tc2:4,bot:0,bc:1,leg:0,lc:5,sleeve:0,slc:4,glove:0,gc:5,shoe:0,shc:1,sock:0,sc:4,armSize:1,legSize:1},
+ pb:{},rec:[],stats:{races:0,wins:0,dist:0,maxv:0,trophies:0},ach:{},set:{q:1,vol:.6,mus:.3,sens:1,cam:0,touch:0}});
+// Appearance determines the runner's speed/stamina balance.
+function appearancePower(c){let v=50;
+ // The runner's physique drives performance: muscular builds and larger limbs favour power;
+ // a slim, light frame favours stamina. Height, hair and kit provide smaller modifiers.
+ v += ([-24,0,24][c.build]||0);
+ v += Math.round((c.h-1.82)*45);
+ v += Math.round(((c.armSize||1)-1)*22);
+ v += Math.round(((c.legSize||1)-1)*28);
+ v += [2,1,-2,-3,0][c.hair]||0;
+ v += (c.top===3?-2:0) + (c.bot===2?-2:0) + (c.leg===2?-1:0);
+ v += (c.shoe===1?2:c.shoe===2?-2:0);
+ return Math.max(1,Math.min(99,Math.round(v)));}
+let DB=DEF();try{const s=JSON.parse(localStorage.getItem('sss1'));if(s){DB=Object.assign(DEF(),s);DB.ch=Object.assign(DEF().ch,s.ch);DB.set=Object.assign(DEF().set,s.set)}}catch(e){}
+delete DB.ch.powerSetting;DB.st.power=appearancePower(DB.ch);DB.st.stamina=100-DB.st.power;
+const sv=()=>{DB.st.power=appearancePower(DB.ch);DB.st.stamina=100-DB.st.power;try{localStorage.setItem('sss1',JSON.stringify(DB))}catch(e){}};
+const lvl=()=>1+Math.floor(Math.sqrt(DB.xp/40)),fmt=t=>t<60?t.toFixed(2)+'s':Math.floor(t/60)+':'+(t%60).toFixed(2).padStart(5,'0'),ft=h=>{const i=Math.round(h*39.37);return Math.floor(i/12)+"'"+i%12+'"'},mph=v=>v*2.237;
+function addXP(n){const a=lvl();DB.xp+=n;DB.pts+=(lvl()-a)*3;sv()}
+/* ---------- CHARACTER ---------- */
+const OPT={hair:['Bald','Short','Afro','Long','Mohawk'],head:['None','Cap','Visor','Hood','Headband'],top:['Singlet','T-shirt','Sports top','Hoodie'],tp:['Solid','Stripe','Split'],bot:['Running','Compression','Baggy'],leg:['None','3/4 leggings','Full pants'],sleeve:['None','Short','Long'],glove:['None','Gloves','Wristbands'],shoe:['Racer','Spikes','Chunky'],sock:['Short','Long','None'],build:['Slim','Average','Muscular']};
+const FLD=[['Body',[['skin','Skin','c'],['build','Build','o'],['h','Height','r']]],['Head',[['hair','Hair','o'],['hc','Hair colour','c'],['head','Headwear','o'],['hdc','Head colour','c']]],['Top',[['top','Style','o'],['tc','Colour','c'],['tp','Pattern','o'],['tc2','Pattern colour','c']]],['Shorts',[['bot','Style','o'],['bc','Colour','c']]],['Bottoms',[['leg','Style','o'],['lc','Colour','c']]],['Arms',[['sleeve','Sleeves','o'],['slc','Colour','c']]],['Hands',[['glove','Style','o'],['gc','Colour','c']]],['Shoes',[['shoe','Style','o'],['shc','Colour','c']]],['Socks',[['sock','Style','o'],['sc','Colour','c']]]];
+const LK={shoe1:3,shoe2:6,head3:4,leg2:2,glove1:2,sleeve2:3,hair4:2},STL=[1,5,8],STN=['Olympia Red','Blue Arena','Night Lights'];
+const M=c=>new T.MeshLambertMaterial({color:c}),bx=(p,w,h,d,c,x,y,z)=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),M(c));m.position.set(x,y,z);p.add(m);return m};
+function buildChar(c){const g=new T.Group(),root=new T.Group(),r={g,root,L:{},R:{}},sk=SK[c.skin],b=[.88,1,1.14][c.build],C=i=>CO[i];g.add(root);
+ const armW=(c.armSize||1),legW=(c.legSize||1);const sh=new T.Mesh(new T.CircleGeometry(.4,16),new T.MeshBasicMaterial({color:0,transparent:true,opacity:.3}));sh.rotation.x=-Math.PI/2;sh.position.y=.02;g.add(sh);
+ bx(root,.4*b,.6,.22*b,sk,0,1.25,0);bx(root,.4*b,.2,.24*b,C(c.bc),0,.98,0);
+ const tw=c.top==0?.34*b:.43*b,th=c.top==2?.34:.6,ty=c.top==2?1.38:1.25;bx(root,tw,th,.25*b,C(c.tc),0,ty,0);
+ if(c.tp==1)bx(root,tw+.01,.07,.26*b,C(c.tc2),0,ty+.05,0);if(c.tp==2)bx(root,tw+.01,th/2,.26*b,C(c.tc2),0,ty-th/4,0);if(c.top==3)bx(root,.3,.12,.14,C(c.tc),0,1.58,-.1);
+ const hg=new T.Group();hg.position.y=1.55;root.add(hg);r.head=hg;bx(hg,.22,.24,.22,sk,0,.12,0);bx(hg,.04,.04,.01,'#111',-.05,.14,.115);bx(hg,.04,.04,.01,'#111',.05,.14,.115);
+ const hc=C(c.hc),hd=C(c.hdc);if(c.hair==1||c.hair==3)bx(hg,.24,.07,.24,hc,0,.24,0);if(c.hair==2)bx(hg,.34,.3,.34,hc,0,.2,-.02);if(c.hair==3)bx(hg,.24,.3,.06,hc,0,.12,-.13);if(c.hair==4)bx(hg,.05,.1,.26,hc,0,.28,0);
+ if(c.head==1||c.head==2){bx(hg,.26,c.head==1?.08:.04,.26,hd,0,c.head==1?.25:.2,0);bx(hg,.2,.02,.15,hd,0,.22,.17)}
+ if(c.head==3){bx(hg,.3,.06,.3,hd,0,.27,-.02);bx(hg,.3,.3,.06,hd,0,.12,-.14);bx(hg,.05,.3,.24,hd,.15,.12,-.03);bx(hg,.05,.3,.24,hd,-.15,.12,-.03)}if(c.head==4)bx(hg,.25,.04,.25,hd,0,.18,0);
+ [[1,'L'],[-1,'R']].forEach(([s,n])=>{const P=new T.Group();P.position.set(s*.1*b,.95,0);root.add(P);bx(P,.15*b*legW,.46,.16*b*legW,sk,0,-.23,0);
+  const sl=[.26,.2,.34][c.bot];bx(P,(.17*b+(c.bot==2?.06:0))*legW,sl,(.18*b+(c.bot==2?.06:0))*legW,C(c.bc),0,-sl/2,0);if(c.leg)bx(P,.16*b,.46,.17*b,C(c.lc),0,-.23,0);
+  const K=new T.Group();K.position.y=-.46;P.add(K);bx(K,.13*b*legW,.46,.14*b*legW,sk,0,-.23,0);if(c.leg){const l=c.leg==2?.46:.22;bx(K,.14*b,l,.15*b,C(c.lc),0,-l/2,0)}
+  const ls=[.14,.3,0][c.sock];if(ls)bx(K,.15*b,ls,.16*b,C(c.sc),0,-.46+ls/2,0);const z=[[.12,.08,.28],[.11,.06,.3],[.14,.11,.28]][c.shoe];bx(K,z[0],z[1],z[2],C(c.shc),0,-.46-z[1]/2+.02,.06);
+  const S=new T.Group();S.position.set(s*(.2*b+.08),1.5,0);root.add(S);const sc=c.top==3?C(c.tc):c.sleeve?C(c.slc):C(c.tc),ul=c.top==3||c.sleeve==2?.3:(c.top==1||c.sleeve==1)?.14:0;
+  bx(S,.1*b*armW,.3,.1*b*armW,sk,0,-.15,0);if(ul)bx(S,.115*b,ul,.115*b,sc,0,-ul/2,0);const E=new T.Group();E.position.y=-.3;S.add(E);bx(E,.09*b*armW,.28,.09*b*armW,sk,0,-.14,0);
+  if(c.top==3||c.sleeve==2)bx(E,.1*b,.28,.1*b,sc,0,-.14,0);bx(E,.09,.1,.09,sk,0,-.33,0);if(c.glove==1)bx(E,.11,.12,.11,C(c.gc),0,-.33,0);if(c.glove==2)bx(E,.105,.04,.105,C(c.gc),0,-.26,0);
+  r[n]={th:P,kn:K,sh:S,el:E}});
+ g.scale.setScalar(c.h/1.82);return r}
+function pose(r,ph,k,lean){r.root.rotation.x=lean;r.root.position.y=Math.abs(Math.sin(ph))*.05*k;[[0,'L'],[Math.PI,'R']].forEach(([s,n])=>{const o=r[n],a=Math.sin(ph+s);o.th.rotation.x=-a*(.3+.8*k);o.kn.rotation.x=.15+(.3+1.2*k)*Math.max(0,Math.cos(ph+s));o.sh.rotation.x=a*(.3+.9*k);o.el.rotation.x=-(1+.3*k)})}
+function poseSet(r){r.root.rotation.x=.75;r.root.position.y=-.3;r.L.th.rotation.x=-1.3;r.L.kn.rotation.x=1.7;r.R.th.rotation.x=-.55;r.R.kn.rotation.x=.9;[r.L,r.R].forEach(o=>{o.sh.rotation.x=-.75;o.el.rotation.x=0})}
+function poseIdle(r,t){r.root.rotation.x=0;r.root.position.y=Math.sin(t*2)*.005;[r.L,r.R].forEach(o=>{o.th.rotation.x=0;o.kn.rotation.x=0;o.sh.rotation.x=0;o.el.rotation.x=.15})}
+const randCh=()=>{const R=n=>Math.floor(Math.random()*n);return{skin:R(6),build:R(3),h:1.65+Math.random()*.35,hair:R(5),hc:R(10),head:R(3),hdc:R(10),top:R(3),tc:R(10),tp:R(3),tc2:R(10),bot:R(3),bc:R(10),leg:R(5)>3?1:0,lc:R(10),sleeve:R(2),slc:R(10),glove:R(3),gc:R(10),shoe:R(3),shc:R(10),sock:R(3),sc:R(10)}};
+/* ---------- 3D WORLD ---------- */
+const R=new T.WebGLRenderer({canvas:$('#c'),antialias:true}),scene=new T.Scene(),cam=new T.PerspectiveCamera(55,1,.1,500),hemi=new T.HemisphereLight(0xffffff,0x667766,1),sun=new T.DirectionalLight(0xffffff,.6);
+sun.position.set(20,40,-10);scene.add(hemi,sun);let world=new T.Group();scene.add(world);
+function resize(){R.setPixelRatio([.6,1,Math.min(devicePixelRatio,2)][DB.set.q]);R.setSize(innerWidth,innerHeight,false);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()}addEventListener('resize',resize);
+const ctex=(w,h,f,rx,ry)=>{const c=document.createElement('canvas');c.width=w;c.height=h;f(c.getContext('2d'),w,h);const t=new T.CanvasTexture(c);t.wrapS=t.wrapT=T.RepeatWrapping;t.repeat.set(rx,ry);return t};
+const laneX=i=>(i-3.5)*1.22,FL=[['#e63946','#fff','#e63946'],['#0057b7','#ffd700'],['#ff9933','#fff','#138808'],['#111','#e00','#ffd700'],['#009b3a','#ffd700','#009b3a'],['#fff','#d52b1e'],['#006a4e','#d52b1e','#006a4e'],['#ce1126','#fff','#0033a0']];
+let sbc,sbt;
+function buildWorld(D,th){while(world.children.length)world.remove(world.children[0]);
+ const t=[{sky:0x8fd0ff,tr:'#c4452f',gr:0x2e8b3d,li:1},{sky:0xbfe3ff,tr:'#2d5fc4',gr:0x2f7a8a,li:1},{sky:0x0a0f24,tr:'#b03a2e',gr:0x1d4d2a,li:.55}][th];scene.background=new T.Color(t.sky);scene.fog=new T.Fog(t.sky,40,190);hemi.intensity=t.li;
+ const L=D+70,mid=(D+30)/2,add=m=>{world.add(m);return m},gr=add(new T.Mesh(new T.PlaneGeometry(500,L+300),M(t.gr)));gr.rotation.x=-Math.PI/2;
+ const tk=add(new T.Mesh(new T.PlaneGeometry(9.76,L),new T.MeshLambertMaterial({map:ctex(256,256,(x,w,h)=>{x.fillStyle=t.tr;x.fillRect(0,0,w,h);x.fillStyle='#fff';for(let i=0;i<=8;i++)x.fillRect(i*32-1,0,3,h);x.globalAlpha=.5;x.fillRect(0,0,w,3)},1,L/10)})));tk.rotation.x=-Math.PI/2;tk.position.set(0,.02,mid);
+ const line=(z,c,w)=>add(bx(world,9.76,.03,w,c,0,.04,z)),k=add(new T.Group());line(0,'#fff',.2);line(D,'#fff',.4);line(D+.3,'#111',.2);
+ for(let z=50;z<D;z+=D>200?100:50)line(z,'#ffffff',.08);
+ for(let i=0;i<8;i++){bx(world,.5,.1,.3,'#222',laneX(i),.06,-.35).rotation.x=-.3}
+ const crowd=ctex(128,128,(x,w,h)=>{x.fillStyle='#333';x.fillRect(0,0,w,h);for(let i=0;i<500;i++){x.fillStyle=CO[Math.random()*10|0];x.fillRect(Math.random()*w,Math.random()*h,5,6)}},5,L/3),fm=FL.map(f=>new T.MeshBasicMaterial({side:2,map:ctex(32,20,(x,w,h)=>f.forEach((c,i)=>{x.fillStyle=c;x.fillRect(0,i*h/f.length,w,h/f.length+1)}),1,1)}));
+ [-1,1].forEach(s=>{const a=Math.atan2(8,14),st=new T.Mesh(new T.BoxGeometry(16.1,.4,L),new T.MeshLambertMaterial({map:crowd}));st.rotation.z=s*a;st.position.set(s*12.5,4,mid);world.add(st);
+  bx(world,.5,13,L,'#3a3f5c',s*21,6,mid);bx(world,.5,1.1,L,'#fff',s*5.6,.55,mid);
+  for(let z=0;z<D+50;z+=40){bx(world,.4,13,.4,'#555',s*19.5,6.5,z);bx(world,3,.5,1,t.li<.8?'#fffbe0':'#ddd',s*18.5,13,z).material=new T.MeshBasicMaterial({color:0xffffff})}
+  for(let z=0;z<D+50;z+=12){const f=new T.Mesh(new T.PlaneGeometry(2,1.3),fm[(z/12+(s>0?3:0))%8|0]);f.rotation.y=Math.PI/2;f.position.set(s*5.7,1.9,z);world.add(f)}});
+ sbc=document.createElement('canvas');sbc.width=512;sbc.height=160;sbt=new T.CanvasTexture(sbc);const sb=new T.Mesh(new T.PlaneGeometry(14,4.4),new T.MeshBasicMaterial({map:sbt}));sb.rotation.y=Math.PI;sb.position.set(0,8,D+22);world.add(sb);bx(world,.4,8,.4,'#444',-5,4,D+22);bx(world,.4,8,.4,'#444',5,4,D+22);board('SUPER SPEED STARS','0.00');}
+function board(a,b){const x=sbc.getContext('2d');x.fillStyle='#071022';x.fillRect(0,0,512,160);x.fillStyle='#ffd400';x.font='800 34px Rubik,sans-serif';x.textAlign='center';x.fillText(a,256,50);x.fillStyle='#4de1ff';x.font='800 64px Rubik,sans-serif';x.fillText(b,256,125);sbt.needsUpdate=true}
+/* ---------- AUDIO ---------- */
+let ac;const A=()=>{if(!ac)try{ac=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}if(ac&&ac.state=='suspended')ac.resume();return ac};
+function beep(f,d=.1,v=1,ty='square'){const a=ac;if(!a||!DB.set.vol)return;const o=a.createOscillator(),g=a.createGain();o.type=ty;o.frequency.value=f;g.gain.value=.12*v*DB.set.vol;o.connect(g);g.connect(a.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+d);o.stop(a.currentTime+d)}
+const NT=[262,330,392,523,392,330,294,392];let ni=0;setInterval(()=>{if(ac&&DB.set.mus>0){const a=ac,o=a.createOscillator(),g=a.createGain();o.type='triangle';o.frequency.value=NT[ni++%8]*(mode=='race'?2:1);g.gain.value=.1*DB.set.mus;o.connect(g);g.connect(a.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,a.currentTime+.3);o.stop(a.currentTime+.3)}},380);
+/* ---------- RUNNER PHYSICS ---------- */
+const poolOf=s=>60+s.stamina*1.4;
+function mkR(ch,st,lane,sk){const r={ch,st,lane,sk,h:ch.h,x:0,v:0,pool:poolOf(st),ph:0,last:-1,side:0,fin:null,maxv:0,effS:0,effN:0,n:0,lock:0,rt:.15+Math.random()*.2,tg:1,m:buildChar(ch)};r.stam=r.pool;r.m.g.position.set(laneX(lane),0,0);world.add(r.m.g);return r}
+const vmaxOf=r=>(8.6+r.st.top*.045+r.st.power*.01)*(1+(r.h-1.82)*.12)*r.sk,gainOf=r=>(1+r.st.accel*.01+r.st.power*.006)*(1-(r.h-1.82)*.3)*r.sk,Tint=r=>.42-.16*Math.min(1,r.v/vmaxOf(r));
+function step(r,side,t,force){const ideal=Tint(r),sg=.09+r.st.agility*.0008,dt=t-r.last;let e=force??(r.n==0?.9:Math.exp(-Math.pow((dt-ideal)/sg,2)));const same=side==r.side&&r.n>0;if(same&&force==null)e*=.25;r.side=side;r.last=t;r.n++;
+ const vm=vmaxOf(r)*(.78+.22*Math.min(1,r.stam/35)),sf=.6+.4*Math.min(1,r.stam/30);r.v+=gainOf(r)*e*Math.max(0,1-Math.pow(r.v/vm,2))*sf;r.effS+=e;r.effN++;return{e,d:dt-ideal,same}}
+function phys(r,dt,fin){const vm=vmaxOf(r),q=r.v/vm;r.v=Math.max(0,r.v-(.35+.0045*r.v*r.v)*dt*(fin?4:1));/* ground friction + air drag */
+ if(!fin)r.stam-=2*Math.pow(q,2.5)*(1-r.st.endurance*.004)*dt;if(q<.6)r.stam+=(1.2+r.st.endurance*.02)*dt*(1.2-q/.6*.7);r.stam=Math.max(0,Math.min(r.pool,r.stam));
+ r.x+=r.v*dt;r.ph+=r.v*dt*Math.PI/1.15*(1.82/r.h);r.maxv=Math.max(r.maxv,r.v)}
+/* ---------- RACE ---------- */
+let mode='menu',G=null,sel={d:100,m:'race',c:''},cang=.5,czoom=3.2,lastSgn=0;
+const DR={acc:['Acceleration',30,'accel'],top:['Maximum speed',100,'top'],sta:['Endurance',400,'endurance'],tec:['Sprint technique',60,'agility'],end:['Endurance',800,'endurance']};
+function startRace(o){A();mode='race';$('#ui').innerHTML='';const D=o.dist;buildWorld(D,DB.th);
+ G={o,D,ph:'mark',tm:0,t:0,wait:1+Math.random()*1.4,rs:[],end:0,fbt:0,cc:0};const P=G.P=mkR(DB.ch,DB.st,3,1);P.isP=1;G.rs.push(P);
+ if(o.mode=='race')[0,1,2,4,5,6,7].forEach(l=>{const a=Math.min(90,10+lvl()*4+Math.random()*14),r=mkR(randCh(),{power:a,stamina:a,accel:a,top:a,agility:60,endurance:a},l,.9+Math.random()*.08);r.tg=D<=200?1:D<=400?.9:D<=800?.74:.66;G.rs.push(r)});
+ hud();say('ON YOUR MARKS');beep(330,.3);if(!DB.set.touch&&!('ontouchstart'in window)){}}
+function hud(){const h=$('#hud');h.hidden=false;const t=DB.set.touch||'ontouchstart'in window;
+ h.innerHTML=`<div id=top><button onclick="exitRace()">EXIT</button><button onclick="startRace(G.o)">RESTART</button><button onclick="DB.set.cam=(DB.set.cam+1)%3;sv()">CAMERA</button><div id=clock>0.00 s<small id=sp>0.0 mph</small><small id=ps></small></div></div><div id=msg></div><div id=fb></div>
+ <div id=sta><small>STAMINA</small><div class=bar><i id=sb style="width:100%"></i></div><small>DISTANCE</small><div class=bar><i id=db style="width:0;background:var(--cy)"></i></div><small id=hn>Alternate A/D or ←/→ in rhythm</small></div>
+ ${t?`<div class=pad style="left:2vw" id=pl>L</div><div class=pad style="right:2vw" id=pr>R</div>`:''}`;
+ if(t){$('#pl').onpointerdown=e=>{e.preventDefault();press(0)};$('#pr').onpointerdown=e=>{e.preventDefault();press(1)}}}
+const say=s=>{const m=$('#msg');if(m)m.textContent=s},fbk=s=>{const f=$('#fb');if(f){f.textContent=s;G.fbt=.7}};
+function exitRace(){G=null;$('#hud').hidden=true;menu()}
+function press(side){if(!G||mode!='race')return;A();if(G.ph=='mark'||G.ph=='set'){G.P.fs=1;fbk('FALSE START: 0.5s lock');return}
+ const P=G.P;if(G.ph!='go'||P.fin!=null||G.t<P.lock)return;const q=step(P,side,G.t);beep(180+q.e*160,.05,.5);if(!P.rt0)P.rt0=G.t;
+ fbk(q.same?'ALTERNATE LEFT / RIGHT':q.e>.8?'PERFECT':q.e>.5?'GOOD':q.d<0?'TOO FAST':'TOO SLOW')}
+const KL=['a','arrowleft','z','f'],KR=['d','arrowright','x','j'];
+addEventListener('keydown',e=>{if(e.repeat)return;const k=e.key.toLowerCase();if(KL.includes(k))press(0);else if(KR.includes(k))press(1);else if(k=='c'&&G){DB.set.cam=(DB.set.cam+1)%3}else if(rxn)rxHit()});
+function tick(dt){if(!G)return;G.tm+=dt;
+ if(G.ph=='mark'&&G.tm>1.7){G.ph='set';G.tm=0;say('SET');beep(440,.3)}
+ else if(G.ph=='set'&&G.tm>G.wait){G.ph='go';G.tm=0;G.t=0;say('GO!');beep(990,.5);G.rs.forEach(r=>r.last=-.42);if(G.P.fs)G.P.lock=.5;setTimeout(()=>G&&say(''),900)}
+ if(G.ph=='go'||G.ph=='done'){G.t+=dt;const N=4;for(const r of G.rs){for(let i=0;i<N;i++){const d=dt/N;
+   if(!r.isP&&r.fin==null&&G.t>r.rt&&G.t-r.last>=Tint(r)*(1+(Math.random()-.5)*.1)&&r.v<r.tg*vmaxOf(r)*(r.stam<10?.5:1))step(r,1-r.side,G.t,.8+Math.random()*.17);
+   phys(r,d,r.fin!=null);if(r.fin==null&&r.x>=G.D){r.fin=G.t-(r.x-G.D)/Math.max(r.v,.1);if(r.isP){G.ph='done';G.end=0;say(r.fin.toFixed(2)+' s');beep(660,.4)}}}}
+  if(G.ph=='done'){G.end+=dt;if(G.end>2.6){const g=G;G=null;results(g)}}}
+ if(!G)return;const P=G.P;if(G.fbt>0&&(G.fbt-=dt)<=0)$('#fb').textContent='';
+ const sorted=[...G.rs].sort((a,b)=>(b.fin==null?b.x:1e4-b.fin)-(a.fin==null?a.x:1e4-a.fin)),pos=sorted.indexOf(P)+1,tt=P.fin??G.t;
+ $('#clock').firstChild.nodeValue=fmt(Math.max(0,tt))+' ';$('#sp').textContent=mph(P.v).toFixed(1)+' mph  ·  '+Math.min(P.x,G.D).toFixed(0)+'/'+G.D+' m';$('#ps').textContent=G.rs.length>1?'Position '+pos+'/'+G.rs.length:'';
+ $('#sb').style.width=100*P.stam/P.pool+'%';$('#db').style.width=Math.min(100,100*P.x/G.D)+'%';if(((performance.now()/100)|0)%3==0)board(DB.name.toUpperCase(),fmt(Math.max(0,tt)));
+ const sg=Math.sin(P.ph)>0?1:0;if(sg!=lastSgn&&P.v>2)beep(90,.03,.3,'triangle');lastSgn=sg}
+function updModels(t){if(!G)return;for(const r of G.rs){const g=r.m.g;g.position.set(laneX(r.lane),0,r.x);const q=r.v/vmaxOf(r);
+ if(G.ph=='mark')poseIdle(r.m,t);else if(G.ph=='set'||(G.ph=='go'&&r.n==0&&r.v<.3&&r.fin==null&&G.t<.9&&G.ph=='go'&&r.isP&&false))poseSet(r.m);
+ else if(r.fin!=null&&r.v<2){poseIdle(r.m,t);r.m.L.sh.rotation.x=r.m.R.sh.rotation.x=-2.8;r.m.L.el.rotation.x=r.m.R.el.rotation.x=0}
+ else if(r.v<.2&&r.n==0)poseSet(r.m);else{pose(r.m,r.ph,Math.min(1,.15+q),.12+.4*Math.max(0,1-r.v/7));if(r.fin!=null&&r.v>=2){r.m.L.sh.rotation.x=r.m.R.sh.rotation.x=-2.6}}}}
+const cp=new T.Vector3(),cl=new T.Vector3();let cdt=0;
+function camera(dt,t){let tp=new T.Vector3(),lk;
+ if(G){const P=G.P,x=laneX(P.lane),z=P.x,m=DB.set.cam;if(m==0){tp.set(x+.8,1.7,z-5.5);lk=new T.Vector3(x,1,z+4)}else if(m==1){tp.set(x+7,1.4,z+1);lk=new T.Vector3(x,1,z+1.5)}else{tp.set(x,1.6,z+8);lk=new T.Vector3(x,1.1,z)}
+  cam.position.lerp(tp,Math.min(1,dt*6*DB.set.sens));cl.lerp(lk,Math.min(1,dt*8));cam.fov=55+Math.min(1,P.v/14)*12;cam.updateProjectionMatrix()}
+ else{const c=mode=='cust'?cang:t*.12+.5,h=mode=='cust'?1.1:1.25,z=mode=='cust'?czoom:3.6;tp.set(Math.sin(c)*z,h,2+Math.cos(c)*z);cam.position.lerp(tp,Math.min(1,dt*5));lk=new T.Vector3(innerWidth>700?-.5*Math.cos(c):0,1,2);cl.lerp(lk,.2);cam.fov=45;cam.updateProjectionMatrix()}
+ cam.lookAt(cl)}
+/* ---------- RESULTS / PROGRESSION ---------- */
+const AC=[['first','First steps','Finish a race',()=>DB.stats.races>=1],['win','Winner','Win a race',()=>DB.stats.wins>=1],['ten','Regular','Run 10 races',()=>DB.stats.races>=10],['s14','Under 14s','100m below 14.0s',()=>DB.pb[100]<14],['s12','Under 12s','100m below 12.0s',()=>DB.pb[100]<12],['s11','Under 11s','100m below 11.0s',()=>DB.pb[100]<11],['mph','Speed demon','Reach 25 mph',()=>DB.stats.maxv>=25],['l5','Level 5','Reach level 5',()=>lvl()>=5],['km','Long haul','Run 5 km in total',()=>DB.stats.dist>=5000],['tr','Collector','Win 5 races',()=>DB.stats.trophies>=5]];
+function results(g){const P=g.P,o=g.o,D=g.D,f=P.fin,pos=g.rs.filter(r=>r.fin!=null&&r.fin<f).length+1,rec=o.mode=='race'||o.mode=='trial';let pbn=false,xp=5,gain='',n=[];
+ if(rec){const old=DB.pb[D];if(!old||f<old){DB.pb[D]=f;pbn=true}DB.rec.push({d:D,t:f,w:Date.now(),n:DB.name,id:DB.id,m:o.mode});DB.rec=DB.rec.slice(-400);DB.stats.races++;DB.stats.dist+=D;DB.stats.maxv=Math.max(DB.stats.maxv,mph(P.maxv));if(o.mode=='race'&&pos==1){DB.stats.wins++;DB.stats.trophies++}xp=15+(o.mode=='race'?(9-pos)*8:10)+(pbn?40:0)+(D/25|0)}
+ if(o.mode=='train'){const dr=DR[o.drill],q=P.effS/Math.max(1,P.effN),a=1+(q>.55?1:0)+(q>.75?1:0);DB.st[dr[2]]=Math.min(100,DB.st[dr[2]]+a);if(dr[2]==='stamina'){DB.st.power=100-DB.st.stamina;}gain=`<p><b>${dr[0]} training:</b> ${dr[2]} +${a} (timing quality ${(q*100|0)}%)</p>`;xp=20}
+ const lv=lvl();addXP(xp);AC.forEach(a=>{if(!DB.ach[a[0]]&&a[3]()){DB.ach[a[0]]=1;n.push(a[1])}});sv();hudOff();
+ $('#ui').innerHTML=`<div class=modal><div><h2>${o.mode=='train'?'Training complete':'Race results'}</h2><div class=rs>${fmt(f)}</div>${pbn?'<b style="color:var(--ac)">NEW PERSONAL BEST!</b>':rec&&DB.pb[D]?'<small>PB '+fmt(DB.pb[D])+'</small>':''}
+ <table><tr><td>Position</td><td>${g.rs.length>1?pos+' / '+g.rs.length:'Solo'}</td></tr><tr><td>Distance</td><td>${D} m</td></tr><tr><td>Average speed</td><td>${mph(D/f).toFixed(1)} mph</td></tr><tr><td>Max speed</td><td>${mph(P.maxv).toFixed(1)} mph</td></tr><tr><td>Reaction</td><td>${P.rt0?P.rt0.toFixed(2)+' s':'--'}</td></tr><tr><td>XP earned</td><td>+${xp} (Level ${lvl()})${lvl()>lv?' LEVEL UP! +3 points':''}</td></tr><tr><td>Stats</td><td>PWR ${DB.st.power} STA ${DB.st.stamina} ACC ${DB.st.accel} TOP ${DB.st.top} AGI ${DB.st.agility} END ${DB.st.endurance}</td></tr></table>${gain}${n.length?'<p>Achievement: <b>'+n.join(', ')+'</b></p>':''}
+ <button class=go onclick="startRace(${JSON.stringify(o).replace(/"/g,'&quot;')})">Restart</button><button onclick="menu()">Menu</button></div></div>`}
+const hudOff=()=>$('#hud').hidden=true;
+/* ---------- SCREENS ---------- */
+const show=h=>{$('#ui').innerHTML=h};let rxn=null;
+function place(){buildWorld(100,DB.th);const m=buildChar(DB.ch);m.g.position.set(0,0,2);world.add(m.g);poseIdle(m,0);window.PM=m}
+function menu(){mode='menu';G=null;hudOff();place();const s=DB.st,b=(l,f)=>`<button class=big onclick="${f}">${l}</button>`;
+ show(`<div class=side><h1>SUPER<br>SPEED STARS</h1><div class=card><b>${DB.name}</b> <small>guest ${DB.id}</small><br>Level ${lvl()} · ${DB.xp} XP${DB.pts?` · <b style="color:var(--ac)">${DB.pts} points to spend</b>`:''}<br>Power ${s.power} · Stamina ${s.stamina} · Height ${ft(DB.ch.h)}<br>PB 100m ${DB.pb[100]?fmt(DB.pb[100]):'--'} · Races ${DB.stats.races} · Wins ${DB.stats.wins}</div>
+ <button class="big go" onclick="startRace({dist:100,mode:'race'})">PLAY: 100m race</button>${b('Character customisation','cust()')}${b('Training','training()')}${b('Race modes','modes()')}${b('Leaderboards','lb()')}${b('Statistics','stats()')}${b('Achievements','ach()')}${b('Settings','settings()')}</div>`)}
+const back='<button onclick="menu()">◀ Menu</button>';
+function cust(){mode='cust';if(!window.PM||!world.children.length||G)place();const sc=$('.panel')?$('.panel').scrollTop:0;
+ let h=`<div class=panel><h2>Customise</h2>${back}<input value="${DB.name}" maxlength=14 oninput="DB.name=this.value||'Guest';sv()"><div class=card><b>RUNNER STATS</b><div class=row><span>Speed / Power</span><b>${DB.st.power}/100</b></div><div class=bar><i style="width:${DB.st.power}%"></i></div><div class=row><span>Stamina</span><b>${DB.st.stamina}/100</b></div><div class=bar><i style="width:${DB.st.stamina}%;background:var(--cy)"></i></div><small>Calculated from build, height, hair, outfit and shoes. Speed + stamina always add up to 100.</small></div><div class=row><button onclick="rnd()">🎲 Randomise</button><button onclick="rst()">Reset</button><button class=go onclick="sv();menu()">Save</button></div><div class=row><span>Zoom</span><input type=range min=1.6 max=6 step=.1 value=${czoom} oninput="czoom=+this.value"></div><small>Drag the screen to rotate</small><h3>Body proportions</h3><div class=card><small>Your physique sets your stats. Build, arm size, leg size and height combine automatically — there is no Power slider.</small></div><div class=row><span>Arm size</span><input type=range min=.65 max=1.7 step=.05 value=${DB.ch.armSize||1} onchange="DB.ch.armSize=+this.value;sv();place();cust()"></div><div class=row><span>Leg size</span><input type=range min=.65 max=1.7 step=.05 value=${DB.ch.legSize||1} onchange="DB.ch.legSize=+this.value;sv();place();cust()"></div>`;
+ for(const[g,fs]of FLD){h+=`<h3>${g}</h3>`;for(const[k,l,ty]of fs){if(ty=='o')h+=`<div class=row><span>${l}</span><button onclick="cyc('${k}',-1)">◀</button><b>${OPT[k][DB.ch[k]]}${LK[k+DB.ch[k]]>lvl()?' 🔒':''}</b><button onclick="cyc('${k}',1)">▶</button></div>`;
+  else if(ty=='c')h+=`<div class=row><span>${l}</span><div>${(k=='skin'?SK:CO).map((c,i)=>`<i class="sw ${DB.ch[k]==i?'on':''}" style="background:${c}" onclick="setc('${k}',${i})"></i>`).join('')}</div></div>`;
+  else h+=`<div class=row><span>${l}</span><input type=range min=1.55 max=2.05 step=.01 value=${DB.ch.h} oninput="DB.ch.h=+this.value;sv();PM.g.scale.setScalar(DB.ch.h/1.82);this.nextSibling.textContent=ft(DB.ch.h);let q=this.closest('.panel').querySelector('.card');q.innerHTML='<b>RUNNER STATS</b><div class=row><span>Speed / Power</span><b>'+DB.st.power+'/100</b></div><div class=bar><i style=width:'+DB.st.power+'%></i></div><div class=row><span>Stamina</span><b>'+DB.st.stamina+'/100</b></div><div class=bar><i style=width:'+DB.st.stamina+'%;background:var(--cy)></i></div><small>Calculated from your character appearance. Total: 100.</small>'"><b style="flex:0 0 50px">${ft(DB.ch.h)}</b></div>`}}
+ show(h+'</div>');$('.panel').scrollTop=sc}
+function cyc(k,d){let n=OPT[k].length,v=DB.ch[k];do v=(v+d+n)%n;while(LK[k+v]>lvl());DB.ch[k]=v;sv();place();cust()}
+function setc(k,i){DB.ch[k]=i;sv();place();cust()}
+function rnd(){const c=randCh();for(const k in c)if(!(LK[k+c[k]]>lvl()))DB.ch[k]=c[k];sv();place();cust()}
+function rst(){DB.ch=DEF().ch;sv();place();cust()}
+function training(){mode='menu';show(`<div class=panel><h2>Training</h2>${back}<p>Each drill is a solo run. Better rhythm gives bigger stat gains.</p>${Object.entries(DR).map(([k,d])=>`<button class=big onclick="startRace({dist:${d[1]},mode:'train',drill:'${k}'})">${d[0]} · ${d[1]}m → ${d[2]} (now ${DB.st[d[2]]})</button>`).join('')}<button class=big onclick="reaction()">Reaction time · 5 rounds → agility</button></div>`)}
+function reaction(){let n=0,sum=0,go=0,to;rxn=1;const box=m=>show(`<div class=modal><div><h2>Reaction time</h2><div id=rb onpointerdown="rxHit()" style="height:160px;background:${m[1]};color:#000;display:flex;align-items:center;justify-content:center;font:800 28px Rubik">${m[0]}</div><p>Press any key or tap when it turns green. Round ${n+1}/5</p><button onclick="rxn=null;training()">Cancel</button></div></div>`);
+ window.rxHit=()=>{if(!rxn)return;if(!go){clearTimeout(to);box(['False start - wait for green','#ff3d5a']);return setTimeout(rnd1,900)}const t=performance.now()-go;go=0;sum+=t;n++;if(n==5){const a=sum/5000,g=a<.25?2:a<.35?1:0;rxn=null;DB.st.agility=Math.min(100,DB.st.agility+g);addXP(15);sv();show(`<div class=modal><div><h2>Average ${a.toFixed(3)} s</h2><p>Agility +${g}. ${g?'':'Get under 0.35 s for gains.'}</p><button onclick="reaction()">Again</button><button onclick="training()">Back</button></div></div>`)}else{box([(t|0)+' ms','#fff']);setTimeout(rnd1,800)}};
+ const rnd1=()=>{box(['Wait...','#ff3d5a']);to=setTimeout(()=>{go=performance.now();box(['GO!','#1fe05a'])},1000+Math.random()*2200)};rnd1()}
+function modes(){mode='menu';const ds=[60,100,200,400,800,1500];show(`<div class=panel><h2>Race modes</h2>${back}<h3>Distance</h3>${ds.map(d=>`<button class="${sel.d==d?'go':''}" onclick="sel.d=${d};modes()">${d}m</button>`).join('')}<div class=row><span>Custom</span><input type=number min=30 max=5000 placeholder="30-5000 m" value="${ds.includes(sel.d)?'':sel.d}" onchange="sel.d=Math.max(30,Math.min(5000,+this.value||100));modes()"></div>
+ <h3>Mode</h3>${[['race','Race vs 7 CPU'],['trial','Time trial'],['practice','Practice']].map(m=>`<button class="${sel.m==m[0]?'go':''}" onclick="sel.m='${m[0]}';modes()">${m[1]}</button>`).join('')}<h3>Stadium</h3>${STN.map((n,i)=>`<button class="${DB.th==i?'go':''}" ${STL[i]>lvl()?'disabled':''} onclick="DB.th=${i};sv();menu();modes()">${n}${STL[i]>lvl()?' 🔒 Lv'+STL[i]:''}</button>`).join('')}<p><button class="big go" onclick="startRace({dist:${sel.d},mode:'${sel.m}'})">START ${sel.d}m ${sel.m=='race'?'RACE':sel.m=='trial'?'TIME TRIAL':'PRACTICE'}</button></p><small>Practice runs are not recorded.</small></div>`)}
+let lt={w:'d',d:100};
+function lb(){mode='menu';const now=Date.now(),lim={d:864e5*1,w:864e5*7,a:1e15,p:0,x:0}[lt.w]||0,ds=[60,100,200,400,800,1500];let rows=DB.rec.filter(r=>r.d==lt.d&&now-r.w<=lim).sort((a,b)=>a.t-b.t).slice(0,20);
+ show(`<div class="panel wide"><h2>Leaderboards</h2>${back}<div class=tabs>${[['d','Daily'],['w','Weekly'],['a','All-time'],['p','Personal records'],['x','World']].map(t=>`<button class="${lt.w==t[0]?'on':''}" onclick="lt.w='${t[0]}';lb()">${t[1]}</button>`).join('')}</div>
+ ${lt.w=='x'?`<div class=card><b>Worldwide rankings are not available in this build.</b><br>A verified worldwide board needs a server that checks each time. This page has no backend and blocks outside network calls, so no online scores exist and none are faked. Everything on the other tabs is stored only on this device (local, unverified).</div>`:lt.w=='p'?`<table><tr><th>Distance</th><th>Best</th></tr>${Object.keys(DB.pb).sort((a,b)=>a-b).map(d=>`<tr><td>${d}m</td><td>${fmt(DB.pb[d])}</td></tr>`).join('')||'<tr><td>No records yet</td></tr>'}</table>`:`<div class=tabs>${ds.map(d=>`<button class="${lt.d==d?'on':''}" onclick="lt.d=${d};lb()">${d}m</button>`).join('')}</div><small>LOCAL ranking on this device (unverified)</small><table><tr><th>#</th><th>Runner</th><th>Time</th><th>Date</th></tr>${rows.map((r,i)=>`<tr><td>${i+1}</td><td>${r.n} <small>${r.id}</small></td><td>${fmt(r.t)}</td><td>${new Date(r.w).toLocaleDateString()}</td></tr>`).join('')||'<tr><td colspan=4>No times yet. Race to set one.</td></tr>'}</table>`}</div>`)}
+function stats(){mode='menu';const s=DB.st,S=DB.stats,nx=Math.pow(lvl(),2)*40,pv=Math.pow(lvl()-1,2)*40,nm={power:'Speed / Power',stamina:'Stamina',accel:'Acceleration',top:'Top speed',agility:'Agility',endurance:'Endurance'};
+ show(`<div class=panel><h2>Statistics</h2>${back}<div class=card>Level ${lvl()} · ${DB.xp} XP<div class=bar><i style="width:${100*(DB.xp-pv)/(nx-pv)}%"></i></div>Points to spend: <b>${DB.pts}</b></div>${Object.keys(nm).map(k=>`<div class=row><span style="width:100px">${nm[k]}</span><div class=bar style="flex:1"><i style="width:${s[k]}%"></i></div><b style="flex:0 0 30px">${s[k]}</b><button ${(k!=='power'&&k!=='stamina'&&DB.pts&&s[k]<100)?'':'disabled'} onclick="DB.st.${k}++;DB.pts--;sv();stats()">${k==='power'||k==='stamina'?'AUTO':'+'}</button></div>`).join('')}<div class=row><span style="width:100px">Height</span><b>${ft(DB.ch.h)} (set in customiser)</b></div>
+ <table><tr><td>Total races</td><td>${S.races}</td></tr><tr><td>Wins / trophies</td><td>${S.wins} / ${S.trophies}</td></tr><tr><td>Total distance</td><td>${(S.dist/1000).toFixed(2)} km</td></tr><tr><td>Top speed</td><td>${S.maxv.toFixed(1)} mph</td></tr><tr><td>Est. top speed (stats)</td><td>${mph(vmaxOf({st:s,h:DB.ch.h,sk:1})).toFixed(1)} mph</td></tr>${Object.keys(DB.pb).sort((a,b)=>a-b).map(d=>`<tr><td>PB ${d}m</td><td>${fmt(DB.pb[d])}</td></tr>`).join('')}</table></div>`)}
+function ach(){mode='menu';show(`<div class=panel><h2>Achievements</h2>${back}${AC.map(a=>`<div class=card style="opacity:${DB.ach[a[0]]?1:.5}">${DB.ach[a[0]]?'🏆':'🔒'} <b>${a[1]}</b><br><small>${a[2]}</small></div>`).join('')}<h3>Unlocks</h3><div class=card>${Object.entries(LK).map(([k,v])=>`${k.replace(/(\D+)(\d)/,(m,a,b)=>a+' option '+b)}: level ${v}`).join('<br>')}<br>Stadiums: Blue Arena Lv5, Night Lights Lv8</div></div>`)}
+function settings(){mode='menu';const s=DB.set,sl=(k,l,mx)=>`<div class=row><span style="width:110px">${l}</span><input type=range min=0 max=${mx} step=.1 value=${s[k]} oninput="DB.set.${k}=+this.value;sv()"></div>`;
+ show(`<div class=panel><h2>Settings</h2>${back}<div class=row><span style="width:110px">Graphics</span><select onchange="DB.set.q=+this.value;sv();resize()">${['Low','Medium','High'].map((n,i)=>`<option value=${i} ${s.q==i?'selected':''}>${n}</option>`).join('')}</select></div>${sl('vol','Sound',1)}${sl('mus','Music',1)}${sl('sens','Camera speed',2)}
+ <div class=row><span style="width:110px">Camera</span><select onchange="DB.set.cam=+this.value;sv()">${['Chase','Side','Front'].map((n,i)=>`<option value=${i} ${s.cam==i?'selected':''}>${n}</option>`).join('')}</select></div>
+ <div class=row><span style="width:110px">Touch pads</span><select onchange="DB.set.touch=+this.value;sv()"><option value=0 ${s.touch?'':'selected'}>Auto</option><option value=1 ${s.touch?'selected':''}>Always on</option></select></div>
+ <button class=big onclick="document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen()">Toggle fullscreen</button><div class=card>Keys: A / D, ← / →, Z / X alternate to take strides. Press C for camera. Tap L / R pads on touch screens.</div></div>`)}
+/* drag rotate */
+let dr=0;addEventListener('pointerdown',e=>{if(mode=='cust'&&e.target.id=='c'){dr=e.clientX}A()});addEventListener('pointermove',e=>{if(dr){cang-=(e.clientX-dr)*.01*DB.set.sens;dr=e.clientX}});addEventListener('pointerup',()=>dr=0);addEventListener('wheel',e=>{if(mode=='cust')czoom=Math.max(1.6,Math.min(6,czoom+e.deltaY*.004))});
+/* loop */
+let lt0=performance.now();function loop(n){const dt=Math.min(.05,(n-lt0)/1000);lt0=n;tick(dt);updModels(n/1000);if(!G&&window.PM&&mode!='race')poseIdle(PM,n/1000);camera(dt,n/1000);R.render(scene,cam);requestAnimationFrame(loop)}
+resize();cam.position.set(1,1.4,5);menu();requestAnimationFrame(loop);
+</script></body></html>
